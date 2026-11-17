@@ -189,26 +189,32 @@ export function drawDog(ctx, pose = 'idle') {
 }
 
 // ---------------------------------------------------------------- DÜNYA
-function drawTile(ctx, v) {
-  ctx.fillStyle = '#9b6b45';
+function drawTile(ctx, v, base = '#9b6b45') {
+  ctx.fillStyle = base;
   ctx.fillRect(0, 0, 48, 48);
-  ctx.strokeStyle = 'rgba(60,34,16,.30)';
+  ctx.strokeStyle = 'rgba(40,24,12,.28)';
   ctx.lineWidth = 1.4;
   for (const y of [0, 16, 32, 48]) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(48, y); ctx.stroke(); }
   const xs = v ? [[12, 0], [36, 16], [20, 32]] : [[30, 0], [10, 16], [40, 32]];
   for (const [x, y] of xs) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 16); ctx.stroke(); }
-  ctx.strokeStyle = 'rgba(255,224,180,.13)';
+  ctx.strokeStyle = 'rgba(255,240,215,.14)';
   ctx.lineWidth = 1.2;
   const gs = v ? [[4, 6, 14], [26, 22, 10], [6, 40, 9], [30, 43, 12]] : [[6, 9, 12], [24, 5, 9], [20, 25, 16], [14, 38, 12]];
   for (const [x, y, w] of gs) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w, y); ctx.stroke(); }
 }
 
-function drawWall(ctx) {
-  ctx.fillStyle = '#f5e6c9';
+function drawWall(ctx, th = THEMES.salon) {
+  ctx.fillStyle = th.wallA;
   ctx.fillRect(0, 0, 128, 128);
-  ctx.fillStyle = '#f0deba';
+  if (th.plain) {
+    // açık hava: düz gökyüzü, seyrek benekler
+    ctx.fillStyle = th.motif;
+    for (const [x, y, r] of [[20, 30, 2.2], [84, 14, 1.6], [58, 76, 2], [108, 98, 1.8], [30, 112, 1.5]]) { ell(ctx, x, y, r, r); ctx.fill(); }
+    return;
+  }
+  ctx.fillStyle = th.wallB;
   for (let x = 0; x < 128; x += 32) ctx.fillRect(x, 0, 16, 128);
-  ctx.fillStyle = '#e8d2a6';
+  ctx.fillStyle = th.motif;
   for (let x = 8; x < 128; x += 32) {
     for (let y = 16; y < 128; y += 64) {
       const yy = y + ((x - 8) / 32 % 2) * 32;
@@ -322,6 +328,153 @@ function drawLamp(ctx) {
   poly(ctx, [9, 6, 31, 6, 37, 32, 3, 32]); paint(ctx, '#f6d37a', '#cfa74a', 1.8);
 }
 
+
+function drawCrate(ctx) {
+  const O = '#6a4517';
+  rrect(ctx, 1.2, 1.2, 41.6, 41.6, 4); paint(ctx, '#e6bd6c', O, 2.2);
+  rrect(ctx, 6.5, 6.5, 31, 31, 2); paint(ctx, '#d8a850', '#a8782f', 1.5);
+  seg(ctx, 8, 8, 36, 36, '#a8782f', 4.5);
+  seg(ctx, 36, 8, 8, 36, '#a8782f', 4.5);
+  seg(ctx, 8, 8, 36, 36, '#efcd88', 2);
+  seg(ctx, 36, 8, 8, 36, '#efcd88', 2);
+  for (const [x, y] of [[4.6, 4.6], [39.4, 4.6], [4.6, 39.4], [39.4, 39.4]]) { ell(ctx, x, y, 1.3, 1.3); paint(ctx, O); }
+}
+
+function drawVase(ctx) {
+  seg(ctx, 12, 9, 12, 3.5, '#4e9a54', 1.8);
+  for (const [x, y] of [[12, 1.2], [9.4, 3.4], [14.6, 3.4]]) { ell(ctx, x, y, 2.3, 2.3); paint(ctx, '#f0719c'); }
+  ell(ctx, 12, 3, 1.5, 1.5); paint(ctx, '#ffd866');
+  rrect(ctx, 7.5, 8, 9, 5.5, 2); paint(ctx, '#7fb4e6', '#28507f', 1.6);
+  rrect(ctx, 2.2, 12, 19.6, 17, 7.5); paint(ctx, '#5b9bd5', '#28507f', 1.8);
+  rrect(ctx, 4, 18.4, 16, 3.4, 1.5); paint(ctx, '#eaf4ff');
+}
+
+function drawHeavyPlate(ctx, down) {
+  const h = down ? 2.6 : 7;
+  rrect(ctx, 4, 12 - 4 - h, 36, h + 2, 2.5); paint(ctx, '#ee9438', '#8a4a0c', 1.8);
+  if (!down) for (const x of [12, 22, 32]) { poly(ctx, [x - 2.6, 3.2, x + 2.6, 3.2, x, 6.2]); paint(ctx, '#8a4a0c'); }
+  rrect(ctx, 1, 7.5, 42, 4.2, 2); paint(ctx, '#5d6570', '#2f3640', 1.6);
+}
+
+function drawLiquid(ctx, top, col, hi, lip) {
+  ctx.fillStyle = col;
+  if (!top) { ctx.fillRect(0, 0, 48, 48); return; }
+  ctx.beginPath();
+  ctx.moveTo(0, lip);
+  for (let x = 0; x <= 48; x += 4) ctx.lineTo(x, lip + Math.sin((x / 48) * TAU) * 1.6);
+  ctx.lineTo(48, 48); ctx.lineTo(0, 48); ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  for (let x = 0; x <= 48; x += 4) ctx[x ? 'lineTo' : 'moveTo'](x, lip + Math.sin((x / 48) * TAU) * 1.6);
+  ctx.strokeStyle = hi; ctx.lineWidth = 2.4; ctx.stroke();
+}
+
+function drawMud(ctx, top) {
+  drawLiquid(ctx, top, 'rgba(112,88,48,.96)', '#a3884f', 12);
+  ctx.fillStyle = 'rgba(160,136,84,.9)';
+  for (const [x, y, r] of top ? [[11, 24, 3], [30, 20, 2.2], [38, 34, 3.2]] : [[10, 12, 2.6], [32, 30, 3]]) { ell(ctx, x, y, r, r * 0.8); ctx.fill(); }
+}
+
+function drawSoil(ctx) {
+  ctx.fillStyle = '#74512f'; ctx.fillRect(0, 0, 48, 48);
+  ctx.fillStyle = '#62432a';
+  for (const [x, y, rx, ry] of [[10, 9, 7, 4], [34, 16, 8, 5], [16, 30, 9, 5], [38, 38, 7, 4], [4, 42, 5, 3]]) { ell(ctx, x, y, rx, ry); ctx.fill(); }
+  ctx.fillStyle = '#a58763';
+  for (const [x, y, r] of [[24, 8, 2], [8, 22, 1.6], [42, 27, 2.2], [27, 40, 1.8], [14, 44, 1.4]]) { ell(ctx, x, y, r, r * 0.85); ctx.fill(); }
+  ctx.fillStyle = 'rgba(255,235,200,.16)';
+  for (const [x, y] of [[20, 20], [36, 6], [6, 34], [44, 44], [30, 28]]) ctx.fillRect(x, y, 2, 2);
+}
+
+function drawThin(ctx) {
+  rrect(ctx, 0.8, 1, 46.4, 9, 2.4); paint(ctx, '#e3c58d', '#7a5a2c', 1.8);
+  seg(ctx, 5, 4, 20, 4, 'rgba(122,90,44,.4)', 1);
+  seg(ctx, 26, 6.6, 42, 6.6, 'rgba(122,90,44,.4)', 1);
+  for (const x of [4.6, 43.4]) { ell(ctx, x, 5.5, 1.2, 1.2); paint(ctx, '#7a5a2c'); }
+}
+
+function drawBoard(ctx) {
+  ctx.fillStyle = '#ead7ab'; ctx.fillRect(4, 0, 40, 48);
+  ctx.strokeStyle = '#cdb07a'; ctx.lineWidth = 1.6;
+  for (let y = 3; y < 48; y += 6) { ctx.beginPath(); ctx.moveTo(5, y); ctx.lineTo(43, y); ctx.stroke(); }
+  ctx.fillStyle = '#9a7446'; ctx.fillRect(2, 0, 4, 48); ctx.fillRect(42, 0, 4, 48);
+  ctx.strokeStyle = 'rgba(122,90,44,.55)'; ctx.lineWidth = 1.1;
+  for (const [x, y] of [[14, 8], [28, 22], [18, 36]]) for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(x + i * 3, y); ctx.lineTo(x + i * 3 - 1.5, y + 8); ctx.stroke(); }
+}
+
+function drawLift(ctx) {
+  rrect(ctx, 0.8, 0.8, 46.4, 12.4, 2.5); paint(ctx, '#aab3be', '#39414c', 1.8);
+  ctx.save(); ctx.beginPath(); ctx.rect(2, 2, 44, 4.6); ctx.clip();
+  ctx.fillStyle = '#f2c84b'; ctx.fillRect(2, 2, 44, 4.6);
+  ctx.fillStyle = '#39414c';
+  for (let x = -4; x < 52; x += 10) poly(ctx, [x, 6.6, x + 5, 6.6, x + 9, 2, x + 4, 2]), ctx.fill();
+  ctx.restore();
+  for (const x of [6, 42]) { ell(ctx, x, 9.6, 1.3, 1.3); paint(ctx, '#39414c'); }
+}
+
+function drawSensor(ctx, on) {
+  ell(ctx, 15, 15, 12, 12); paint(ctx, on ? '#d9f7e2' : '#eef1f5', '#39414c', 2);
+  ell(ctx, 15, 15, 5, 5); paint(ctx, on ? '#58b368' : '#8d99a6', '#39414c', 1.5);
+  ctx.strokeStyle = on ? '#3d8b4c' : '#8d99a6'; ctx.lineWidth = 1.6;
+  for (const r of [8, 10.6]) { ctx.beginPath(); ctx.arc(15, 15, r, -0.7, 0.7); ctx.stroke(); ctx.beginPath(); ctx.arc(15, 15, r, Math.PI - 0.7, Math.PI + 0.7); ctx.stroke(); }
+}
+
+// Uyuyan bekçi: iri bir buldok. Çerçeve 88x58, ayak hizası y=56.
+function drawGuard(ctx, awake) {
+  const O = '#4f2d14', F = '#b47a4b', D = '#8e5a33', C = '#edd0ab';
+  ell(ctx, 56, 38, 28, 17); paint(ctx, F, O, 2.2);
+  ell(ctx, 72, 45, 12, 10.5); paint(ctx, D, O, 2);
+  ell(ctx, 83, 30, 3, 3); paint(ctx, F, O, 1.6);
+  rrect(ctx, 40, 27, 8, 22, 3); paint(ctx, '#d9534f', O, 1.6);
+  for (const y of [31, 37, 43]) { poly(ctx, [47, y - 2, 52, y, 47, y + 2]); paint(ctx, '#e8e8e8', O, 0.8); }
+  poly(ctx, [9, 22, 6, 9, 17, 16]); paint(ctx, D, O, 2);
+  poly(ctx, [37, 22, 40, 9, 29, 16]); paint(ctx, D, O, 2);
+  rrect(ctx, 6, 14, 34, 34, 14); paint(ctx, F, O, 2.2);
+  ell(ctx, 23, 42, 18, 9.5); paint(ctx, C, O, 2);
+  ell(ctx, 23, 35.5, 5, 3.6); paint(ctx, '#2a1a10');
+  seg(ctx, 23, 39, 23, 44, O, 1.4);
+  if (awake) {
+    for (const x of [15, 31]) { ell(ctx, x, 27, 3.6, 3.8); paint(ctx, '#fff', O, 1.4); ell(ctx, x, 27.6, 1.7, 1.9); paint(ctx, '#2a1a10'); }
+    seg(ctx, 10, 21.5, 19, 24.5, O, 2.4); seg(ctx, 36, 21.5, 27, 24.5, O, 2.4);
+    rrect(ctx, 15, 44, 16, 6, 2.5); paint(ctx, '#7a1f1f', O, 1.4);
+    for (const x of [17, 26.4]) { poly(ctx, [x, 44, x + 2.6, 44, x + 1.3, 47.4]); paint(ctx, '#fff'); }
+  } else {
+    for (const x of [15, 31]) { ctx.beginPath(); ctx.arc(x, 27, 3.4, 0.15, Math.PI - 0.15); paint(ctx, null, O, 1.8); }
+  }
+  ell(ctx, 10, 52, 9, 4.5); paint(ctx, C, O, 2);
+  ell(ctx, 36, 52, 9, 4.5); paint(ctx, C, O, 2);
+}
+
+function drawTree(ctx) {
+  rrect(ctx, 41, 78, 14, 62, 4); paint(ctx, '#b08a62');
+  ctx.fillStyle = '#8fc98a';
+  for (const [x, y, r] of [[48, 48, 34], [26, 64, 22], [70, 64, 22], [36, 30, 20], [62, 30, 20]]) { ell(ctx, x, y, r, r * 0.92); ctx.fill(); }
+  ctx.fillStyle = '#a7d9a0';
+  for (const [x, y, r] of [[40, 38, 9], [60, 54, 7], [28, 60, 6]]) { ell(ctx, x, y, r, r * 0.8); ctx.fill(); }
+}
+
+function drawBush(ctx) {
+  ctx.fillStyle = '#8fc98a';
+  for (const [x, y, r] of [[16, 28, 14], [34, 20, 18], [50, 28, 13]]) { ell(ctx, x, y, r, r * 0.9); ctx.fill(); }
+  ctx.fillRect(4, 28, 56, 12);
+  ctx.fillStyle = '#a7d9a0';
+  for (const [x, y, r] of [[30, 16, 6], [14, 26, 4]]) { ell(ctx, x, y, r, r * 0.8); ctx.fill(); }
+}
+
+function drawCloud(ctx) {
+  ctx.fillStyle = 'rgba(255,255,255,.9)';
+  for (const [x, y, r] of [[26, 28, 14], [46, 20, 18], [68, 28, 14], [48, 32, 16]]) { ell(ctx, x, y, r, r * 0.78); ctx.fill(); }
+}
+
+// ---------------------------------------------------------------- TEMALAR
+export const THEMES = {
+  salon: { wallA: '#f5e6c9', wallB: '#f0deba', motif: '#e8d2a6', tile: '#9b6b45', cap: 0xd39a62, capHi: 0xf2c690, line: 0x4e2f1c },
+  mutfak: { wallA: '#e4f1ea', wallB: '#d8ebe2', motif: '#c4ddd2', tile: '#8f7663', cap: 0xf0ebe3, capHi: 0xffffff, line: 0x4a3a2e },
+  bahce: { plain: true, wallA: '#cdeaf8', motif: '#ffffff', tile: '#8a5f3e', cap: 0x7fbf5f, capHi: 0xa9dc7f, line: 0x3f2a17 },
+  cati: { plain: true, wallA: '#f9dcc6', motif: '#fdeee2', tile: '#b05a4c', cap: 0xdd9479, capHi: 0xf3bba3, line: 0x5a221b },
+  park: { plain: true, wallA: '#d8f0dc', motif: '#f4fbf5', tile: '#7d6247', cap: 0x7fbf5f, capHi: 0xa9dc7f, line: 0x3a2b1c },
+  insaat: { wallA: '#e1e5ec', wallB: '#d8dde6', motif: '#c7ced9', tile: '#8f949d', cap: 0xf2c84b, capHi: 0xffe08a, line: 0x3b3f47 },
+  final: { wallA: '#ded8f1', wallB: '#d4cdeb', motif: '#c3bae3', tile: '#6f5a8a', cap: 0xb79be0, capHi: 0xd8c6f4, line: 0x35284a },
+};
+
 // ---------------------------------------------------------------- KAYIT
 export const ART = {
   cat_idle: { w: 64, h: 48, draw: (c) => drawCat(c, 'idle') },
@@ -332,9 +485,6 @@ export const ART = {
   dog_run0: { w: 80, h: 72, draw: (c) => drawDog(c, 'run0') },
   dog_run1: { w: 80, h: 72, draw: (c) => drawDog(c, 'run1') },
   dog_jump: { w: 80, h: 72, draw: (c) => drawDog(c, 'jump') },
-  tile0: { w: 48, h: 48, draw: (c) => drawTile(c, 0) },
-  tile1: { w: 48, h: 48, draw: (c) => drawTile(c, 1) },
-  wall: { w: 128, h: 128, draw: drawWall },
   door: { w: 48, h: 144, draw: drawDoor },
   plate_up: { w: 44, h: 12, draw: (c) => drawPlate(c, false) },
   plate_down: { w: 44, h: 12, draw: (c) => drawPlate(c, true) },
@@ -347,6 +497,25 @@ export const ART = {
   frame: { w: 60, h: 48, draw: drawFrame },
   plant: { w: 44, h: 76, draw: drawPlant },
   lamp: { w: 40, h: 120, draw: drawLamp },
+  crate: { w: 44, h: 44, draw: drawCrate },
+  vase: { w: 24, h: 30, draw: drawVase },
+  hplate_up: { w: 44, h: 12, draw: (c) => drawHeavyPlate(c, false) },
+  hplate_down: { w: 44, h: 12, draw: (c) => drawHeavyPlate(c, true) },
+  water_top: { w: 48, h: 48, draw: (c) => drawLiquid(c, true, 'rgba(84,170,226,.72)', '#d9f1ff', 10) },
+  water: { w: 48, h: 48, draw: (c) => drawLiquid(c, false, 'rgba(84,170,226,.72)') },
+  mud_top: { w: 48, h: 48, draw: (c) => drawMud(c, true) },
+  mud: { w: 48, h: 48, draw: (c) => drawMud(c, false) },
+  soil: { w: 48, h: 48, draw: drawSoil },
+  thin: { w: 48, h: 12, draw: drawThin },
+  board: { w: 48, h: 48, draw: drawBoard },
+  lift: { w: 48, h: 14, draw: drawLift },
+  sensor: { w: 30, h: 30, draw: (c) => drawSensor(c, false) },
+  sensor_on: { w: 30, h: 30, draw: (c) => drawSensor(c, true) },
+  guard_sleep: { w: 88, h: 58, draw: (c) => drawGuard(c, false) },
+  guard_awake: { w: 88, h: 58, draw: (c) => drawGuard(c, true) },
+  tree: { w: 96, h: 140, draw: drawTree },
+  bush: { w: 64, h: 40, draw: drawBush },
+  cloud: { w: 96, h: 44, draw: drawCloud },
 };
 
 function prep(ctx, k) {
@@ -364,6 +533,22 @@ export function buildTextures(scene) {
     a.draw(t.context);
     t.refresh();
   }
+}
+
+// Bir temanın zemin ve duvar dokularını üretir (bir kez).
+export function buildTheme(scene, name) {
+  const th = THEMES[name] || THEMES.salon;
+  const make = (key, w, h, draw) => {
+    if (scene.textures.exists(key)) return;
+    const t = scene.textures.createCanvas(key, w * S, h * S);
+    prep(t.context, S);
+    draw(t.context);
+    t.refresh();
+  };
+  make(`tile0_${name}`, 48, 48, (c) => drawTile(c, 0, th.tile));
+  make(`tile1_${name}`, 48, 48, (c) => drawTile(c, 1, th.tile));
+  make(`wall_${name}`, 128, 128, (c) => drawWall(c, th));
+  return th;
 }
 
 // Aynı çizimi menüdeki bir <canvas> öğesine basar.

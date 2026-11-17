@@ -54,6 +54,19 @@ export const sfx = {
   win() {
     [523, 659, 784, 1047].forEach((f, i) => tone({ type: 'triangle', f0: f, dur: 0.18, vol: 0.11, delay: i * 0.11 }));
   },
+  dig() {
+    tone({ type: 'sawtooth', f0: 180, f1: 70, dur: 0.12, vol: 0.09 });
+  },
+  crack() {
+    tone({ type: 'square', f0: 420, f1: 90, dur: 0.16, vol: 0.08 });
+  },
+  splash() {
+    tone({ type: 'triangle', f0: 500, f1: 140, dur: 0.22, vol: 0.07 });
+  },
+  fail() {
+    tone({ type: 'triangle', f0: 392, f1: 330, dur: 0.18, vol: 0.11 });
+    tone({ type: 'triangle', f0: 294, f1: 196, dur: 0.32, vol: 0.11, delay: 0.18 });
+  },
   meow() {
     tone({ f0: 620, f1: 1050, dur: 0.14, vol: 0.1 });
     tone({ f0: 1050, f1: 560, dur: 0.26, vol: 0.1, delay: 0.13 });

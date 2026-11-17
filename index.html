@@ -99,8 +99,9 @@
       <h2>Bölüm tamamlandı!</h2>
       <p id="winStats" class="stats"></p>
       <p id="winNote" class="msg"></p>
+      <button id="btnNext" class="btn primary">Sonraki bölüm</button>
       <div class="row">
-        <button id="btnAgain" class="btn primary">Tekrar oyna</button>
+        <button id="btnAgain" class="btn">Tekrar oyna</button>
         <button id="btnWinMenu" class="btn ghost">Ana menü</button>
       </div>
     </div>
@@ -110,11 +111,31 @@
   <div id="pause" class="overlay" hidden>
     <div class="card">
       <h2>Menü</h2>
+      <label class="slider">
+        <span>Tuş boyutu</span>
+        <input id="ctlSize" type="range" min="70" max="150" step="5" value="100" aria-label="Tuş boyutu">
+        <b id="ctlSizeVal">%100</b>
+      </label>
       <button id="btnResume" class="btn primary">Devam et</button>
       <button id="btnRestart" class="btn">Bölümü yeniden başlat</button>
       <button id="btnFullscreen" class="btn">Tam ekran</button>
       <button id="btnQuit" class="btn ghost">Oyundan çık</button>
     </div>
+  </div>
+
+  <!-- Bölüm seçimi -->
+  <div id="levels" class="overlay solid" hidden>
+    <div class="card wide">
+      <h2>Bölüm seç</h2>
+      <div id="levelGrid" class="level-grid"></div>
+      <button id="btnLevelsBack" class="btn ghost">Geri</button>
+    </div>
+  </div>
+
+  <!-- Bölüm başarısız -->
+  <div id="fail" hidden>
+    <b id="failWhy"></b>
+    <span>Bölüm yeniden başlıyor…</span>
   </div>
 
   <!-- Bağlantı koptu -->

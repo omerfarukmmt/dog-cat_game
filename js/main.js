@@ -19,6 +19,7 @@ const app = {
   hostRole: 'cat', // odayı kuranın karakteri
   level: 0,
   playing: false,
+  runId: 0, // her bölüm başlangıcında artar; gecikmeli işler eski bölüme dokunmasın diye
 
   get myRole() {
     if (!this.net) return 'cat';
@@ -32,7 +33,9 @@ const app = {
   onHud(h) {
     $('hudFish').textContent = `${h.fish}/${h.fishTotal}`;
     $('hudBone').textContent = `${h.bone}/${h.boneTotal}`;
-    $('hudTime').textContent = fmtTime(h.time);
+    const timed = h.left !== null && h.left !== undefined;
+    $('hudTime').textContent = timed ? `⏳ ${fmtTime(Math.ceil(h.left))}` : fmtTime(h.time);
+    $('hudTime').parentElement.classList.toggle('low', timed && h.left < 30);
   },
   onPartner(p) {
     const el = $('partner');
@@ -57,17 +60,76 @@ const app = {
     toast(`Şimdi ${ROLE_NAME[role]} sende`);
   },
   onWin(stats) {
+    markDone(this.level);
+    const last = this.level + 1 >= LEVELS.length;
     $('winStats').innerHTML =
       `Süre: ${fmtTime(stats.time)}<br>Balık: ${stats.fish}/${stats.fishTotal} · Kemik: ${stats.bone}/${stats.boneTotal}`;
-    $('winNote').textContent =
-      this.level + 1 < LEVELS.length ? '' : 'Sıradaki bölümler yapım aşamasında.';
+    $('winNote').textContent = last ? 'Tebrikler, bütün bölümleri bitirdiniz!' : '';
+    $('btnNext').hidden = last;
+    const run = this.runId;
     setTimeout(() => {
-      if (this.playing) $('win').hidden = false;
+      if (this.playing && this.runId === run) $('win').hidden = false;
     }, 700);
+  },
+  // Bölüm başarısız oldu: kısa bir bildirim, sonra iki cihaz da bölümü baştan başlatır.
+  onFail(why) {
+    $('failWhy').textContent = why;
+    $('fail').hidden = false;
+    $('pause').hidden = true;
+    const run = this.runId;
+    setTimeout(() => {
+      if (this.playing && this.runId === run) startGame(this.level);
+    }, 1500);
   },
 };
 app.input = input;
 window.__kk = app; // hata ayıklama ve otomatik testler için
+
+// --- cihazda saklanan küçük ayarlar (tuş boyutu, biten bölümler)
+function load(key, fallback) {
+  try {
+    const v = JSON.parse(localStorage.getItem(key));
+    return v === null || v === undefined ? fallback : v;
+  } catch {
+    return fallback;
+  }
+}
+function save(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch { /* gizli sekmede saklanamayabilir; sorun değil */ }
+}
+function markDone(level) {
+  const done = load('kk-done', []);
+  if (!done.includes(level)) save('kk-done', [...done, level]);
+}
+function setCtlSize(percent) {
+  const v = Math.min(150, Math.max(70, Number(percent) || 100));
+  document.documentElement.style.setProperty('--ctl', String(v / 100));
+  $('ctlSize').value = v;
+  $('ctlSizeVal').textContent = `%${v}`;
+  return v;
+}
+
+// Bölüm seçme ekranı: seçilen bölümün numarasıyla onPick çağrılır.
+let levelPick = null;
+function openLevels(onPick) {
+  levelPick = onPick;
+  const done = load('kk-done', []);
+  const grid = $('levelGrid');
+  grid.textContent = '';
+  LEVELS.forEach((lv, i) => {
+    const btn = document.createElement('button');
+    btn.className = `level${done.includes(i) ? ' done' : ''}`;
+    btn.innerHTML = `<b>${i + 1}</b><span>${lv.name}</span>`;
+    btn.addEventListener('click', () => {
+      $('levels').hidden = true;
+      if (levelPick) levelPick(i);
+    });
+    grid.appendChild(btn);
+  });
+  $('levels').hidden = false;
+}
 
 function fmtTime(t) {
   const s = Math.floor(t);
@@ -92,7 +154,7 @@ function menuMsg(text, isErr = false) {
 function showScreen(name) {
   $('menu').hidden = name !== 'menu';
   $('room').hidden = name !== 'room';
-  for (const id of ['win', 'pause', 'lost']) $(id).hidden = true;
+  for (const id of ['win', 'pause', 'lost', 'levels', 'fail']) $(id).hidden = true;
 }
 
 function goFullscreen() {
@@ -270,6 +332,7 @@ function share() {
 function startGame(level) {
   app.level = level;
   app.playing = true;
+  app.runId++;
   input.reset();
   showScreen('none');
   document.body.classList.add('in-game');
@@ -281,6 +344,7 @@ function startGame(level) {
   $('voiceBadge').hidden = solo || !$('remoteAudio').srcObject;
   $('btnAbility').textContent = '🐾';
   keepAwake();
+  toast(`${level + 1}. Bölüm: ${LEVELS[level].name}`);
   app.game.scene.start('game', {
     app,
     level,
@@ -302,9 +366,13 @@ function stopGame() {
   wakeLock = null;
 }
 
+// Bölümü iki cihazda birden başlatır (yeniden başlatma ve sonraki bölüm de buradan geçer).
+function launch(level) {
+  if (app.mode === 'online') app.net.send({ t: 'start', level, hostRole: app.hostRole });
+  startGame(level);
+}
 function restartLevel() {
-  if (app.mode === 'online') app.net.send({ t: 'start', level: app.level, hostRole: app.hostRole });
-  startGame(app.level);
+  launch(app.level);
 }
 
 function leave() {
@@ -336,8 +404,11 @@ function init() {
     goFullscreen();
     app.mode = 'solo';
     app.net = null;
-    startGame(0);
-    toast('Tek başına: ⇄ ile kedi ve köpek arasında geç');
+    openLevels((level) => {
+      goFullscreen();
+      startGame(level);
+      setTimeout(() => toast('Tek başına: ⇄ ile kedi ve köpek arasında geç'), 2700);
+    });
   });
 
   $('btnShare').addEventListener('click', share);
@@ -351,9 +422,19 @@ function init() {
   $('btnMic').addEventListener('click', toggleMic);
   $('btnStart').addEventListener('click', () => {
     if (!app.net?.connected || !app.net.isHost) return;
-    app.net.send({ t: 'start', level: 0, hostRole: app.hostRole });
-    startGame(0);
+    openLevels((level) => {
+      if (app.net?.connected) launch(level);
+    });
   });
+  $('btnLevelsBack').addEventListener('click', () => {
+    $('levels').hidden = true;
+    if (app.mode === 'solo') app.mode = null;
+  });
+  $('btnNext').addEventListener('click', () => {
+    if (app.level + 1 < LEVELS.length) launch(app.level + 1);
+  });
+  setCtlSize(load('kk-ctl', 100));
+  $('ctlSize').addEventListener('input', (e) => save('kk-ctl', setCtlSize(e.target.value)));
   $('btnLeaveRoom').addEventListener('click', leave);
 
   $('btnSwitch').addEventListener('click', () => {

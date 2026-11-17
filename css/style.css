@@ -9,6 +9,7 @@
   --go: #58b368;
   --go-dark: #3d8b4c;
   --bad: #d9534f;
+  --ctl: 1; /* dokunmatik tuş boyutu çarpanı (menüdeki kaydırıcı değiştirir) */
   --font: ui-rounded, "SF Pro Rounded", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
@@ -52,6 +53,68 @@ body.in-game, #game { touch-action: none; }
     var(--bg);
 }
 .overlay { background: rgba(74, 52, 35, .45); z-index: 40; }
+.overlay.solid {
+  background:
+    repeating-linear-gradient(90deg, rgba(226, 203, 163, .35) 0 16px, transparent 16px 32px),
+    var(--bg);
+}
+.card.wide { width: min(100%, 560px); }
+
+.level-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.level {
+  appearance: none;
+  position: relative;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--font);
+  padding: 8px 4px 7px;
+  min-height: 58px;
+  box-shadow: 0 3px 0 var(--ink);
+  cursor: pointer;
+}
+.level:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.level b { display: block; font-size: 20px; line-height: 1.1; }
+.level span { display: block; font-size: 12px; color: var(--soft); }
+.level.done { background: #f0faf1; border-color: #2b6a3a; box-shadow: 0 3px 0 #2b6a3a; }
+.level.done::after {
+  content: "✓";
+  position: absolute;
+  top: -7px; right: -5px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--go);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 20px;
+}
+
+.slider { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; text-align: left; }
+.slider input { flex: 1; min-width: 0; height: 32px; accent-color: var(--go); touch-action: pan-x; }
+.slider b { min-width: 3.2em; text-align: right; font-variant-numeric: tabular-nums; }
+
+#fail {
+  position: absolute;
+  left: 50%; top: 38%;
+  transform: translate(-50%, -50%);
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 22px;
+  border-radius: 18px;
+  background: var(--card);
+  border: 2px solid var(--bad);
+  box-shadow: 0 5px 0 rgba(74, 52, 35, .18);
+  text-align: center;
+  pointer-events: none;
+}
+#fail b { font-size: 20px; color: var(--bad); }
+#fail span { font-size: 13px; color: var(--soft); }
+.pill.low { border-color: var(--bad); color: var(--bad); }
 
 .card {
   width: min(100%, 400px);
@@ -239,20 +302,21 @@ h2 { margin: 0 0 2px; font-size: 24px; }
   border: 2px solid rgba(255, 250, 240, .75);
   color: #fffaf0;
 }
-#dpad span { width: 76px; height: 76px; font-size: 28px; pointer-events: none; }
+#dpad { gap: calc(10px * var(--ctl)); }
+#dpad span { width: calc(76px * var(--ctl)); height: calc(76px * var(--ctl)); font-size: calc(28px * var(--ctl)); pointer-events: none; }
 #dpad[data-dir="l"] .l, #dpad[data-dir="r"] .r, #btnJump.down, #btnAbility.down { background: rgba(74, 52, 35, .62); transform: scale(.94); }
 #btnJump, #btnAbility { appearance: none; padding: 0; font-family: var(--font); }
 #btnJump {
   right: max(18px, env(safe-area-inset-right));
   bottom: max(18px, env(safe-area-inset-bottom));
-  width: 88px; height: 88px;
-  font-size: 32px;
+  width: calc(88px * var(--ctl)); height: calc(88px * var(--ctl));
+  font-size: calc(32px * var(--ctl));
 }
 #btnAbility {
-  right: calc(max(18px, env(safe-area-inset-right)) + 98px);
+  right: calc(max(18px, env(safe-area-inset-right)) + 98px * var(--ctl));
   bottom: calc(max(18px, env(safe-area-inset-bottom)) + 4px);
-  width: 62px; height: 62px;
-  font-size: 24px;
+  width: calc(62px * var(--ctl)); height: calc(62px * var(--ctl));
+  font-size: calc(24px * var(--ctl));
 }
 /* Fare/klavye ile oynanan cihazlarda dokunmatik tuşlar gizlenir. */
 @media (hover: hover) and (pointer: fine) {
@@ -313,7 +377,9 @@ h2 { margin: 0 0 2px; font-size: 24px; }
   .role canvas { height: 44px !important; }
   h2 { font-size: 20px; }
   #pause .card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  #pause h2 { grid-column: 1 / -1; }
+  #pause h2, #pause .slider { grid-column: 1 / -1; }
+  .level-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .card.wide { width: min(100%, 680px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
