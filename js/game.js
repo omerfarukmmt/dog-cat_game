@@ -645,8 +645,15 @@ export class GameScene extends Phaser.Scene {
         // Önünde (üstünde durmayan) biri ya da bir nesne varsa bekler; kimseyi ezmez.
         const cur = bodyRect(b);
         const next = { l: cur.l + vx * dt - 1, r: cur.r + vx * dt + 1, t: cur.t + vy * dt - 1, b: cur.b + vy * dt + 1 };
-        const blocked = [...rects, ...weights].some((r) => overlap(r, next) && r.b > cur.t + 5);
+        const inWay = (r) => overlap(r, next) && r.b > cur.t + 5;
+        const blocked = [...rects, ...weights].some(inWay);
         b.setVelocity(blocked ? 0 : vx, blocked ? 0 : vy);
+        // Yolun kenarına taşan oyuncu hafifçe kenara itilir (ör. basamağın ucunda bekleyen köpek).
+        for (const p of local) {
+          if (!inWay(p.rect())) continue;
+          if (p.x < cur.l) p.zone.body.setVelocityX(-80);
+          else if (p.x > cur.r) p.zone.body.setVelocityX(80);
+        }
       }
       l.cont.setPosition(b.x, b.y);
     }

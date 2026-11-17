@@ -12,8 +12,27 @@
 |---|---|---|
 | Boyut | Küçük: dar geçitlere sığar | Büyük: dar geçide giremez |
 | Zıplama | 2 kare | 3 kare |
+| Tırmanma | Tırmalama tahtasına tırmanır (zıpla tuşunu basılı tut) | – |
+| İnce tahta / dal | Üstünde yürür | Basınca kırılır |
+| İter | Vazo | Kutu |
+| Su | Düşerse bölüm yeniden başlar | Yüzer |
+| Pati tuşu | Miyavlar | Toprağın yanındaysa kazar, değilse havlar (sensörlü kapıları açar) |
+| Uyuyan bekçi | Sessizce geçer | Yaklaşırsa ya da yakınında havlarsa uyandırır |
+| Ağır (turuncu) düğme | Basamaz | Basar (kutu ve vazo da basar) |
 | Toplar | Balık | Kemik |
 | Çıkış | Mama kabı | Kulübe |
+
+## Bölümler
+
+1. **Salon** – temel hareketler, düğme ve kapı
+2. **Mutfak** – kutu, ağır düğme, ince raflar, vazo
+3. **Bahçe** – su, çamur, toprak kazma
+4. **Çatı** – tırmalama tahtası, dallar
+5. **Park** – uyuyan bekçi, havlama sensörü
+6. **İnşaat** – asansörler, kutu
+7. **Final** – hepsi bir arada, süreli
+
+Menüdeki (☰) **Tuş boyutu** kaydırıcısı ekrandaki tuşları büyütüp küçültür; ayar cihazda saklanır.
 
 ## Çalıştırma
 
@@ -44,7 +63,7 @@ js/vendor/            Phaser ve PeerJS
 
 ## Bölüm eklemek
 
-`js/levels.js` içindeki `LEVELS` listesine yeni bir harita eklenir. Harita karakterleri dosyanın başında açıklanmıştır.
+`js/levels.js` içindeki `LEVELS` listesine yeni bir harita eklenir. Harita karakterleri ve nesne listeleri (düğme, kapı, sensör, asansör) dosyanın başında açıklanmıştır.
 
 ## Bağlantı nasıl çalışıyor?
 
