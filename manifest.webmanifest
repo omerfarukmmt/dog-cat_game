@@ -1,0 +1,16 @@
+{
+  "name": "Kedi & Köpek",
+  "short_name": "Kedi & Köpek",
+  "description": "İki kişilik kedi ve köpek bulmaca oyunu",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#f5e6c9",
+  "theme_color": "#f5e6c9",
+  "lang": "tr",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#f5e6c9">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Kedi & Köpek">
+  <meta name="description" content="İki kişilik kedi ve köpek bulmaca oyunu. Davet koduyla arkadaşınla oyna, oynarken konuş.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>Kedi &amp; Köpek</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="game"></div>
+
+  <!-- Ana menü -->
+  <section id="menu" class="screen">
+    <div class="card">
+      <div class="hero" aria-hidden="true">
+        <canvas data-art="cat_idle" data-w="118"></canvas>
+        <canvas data-art="dog_idle" data-w="138" class="mirror"></canvas>
+      </div>
+      <h1>Kedi <span>&amp;</span> Köpek</h1>
+      <p class="tag">İki kişilik bulmaca macerası</p>
+      <button id="btnHost" class="btn primary">Oda kur</button>
+      <form id="joinForm" class="join">
+        <input id="codeInput" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="Oda kodu" autocomplete="off" aria-label="Oda kodu">
+        <button class="btn" type="submit">Katıl</button>
+      </form>
+      <button id="btnSolo" class="btn ghost">Tek başına dene</button>
+      <p id="menuMsg" class="msg" role="status"></p>
+    </div>
+  </section>
+
+  <!-- Oda -->
+  <section id="room" class="screen" hidden>
+    <div class="card">
+      <div class="code-row">
+        <div>
+          <p class="label">Oda kodu</p>
+          <div id="roomCode" class="code">----</div>
+        </div>
+        <button id="btnShare" class="btn small">Kodu paylaş</button>
+      </div>
+      <p id="roomStatus" class="status">Arkadaşın bekleniyor…</p>
+      <div class="roles">
+        <div class="role" data-role="cat">
+          <canvas data-art="cat_idle" data-w="84"></canvas>
+          <b>Kedi</b>
+          <span class="who"></span>
+        </div>
+        <button id="btnSwap" class="swap" aria-label="Karakterleri değiştir">⇄</button>
+        <div class="role" data-role="dog">
+          <canvas data-art="dog_idle" data-w="92"></canvas>
+          <b>Köpek</b>
+          <span class="who"></span>
+        </div>
+      </div>
+      <div class="row">
+        <button id="btnMicRoom" class="btn small">🎤 Sesi aç</button>
+        <button id="btnStart" class="btn primary" disabled>Başla</button>
+      </div>
+      <button id="btnLeaveRoom" class="link">Odadan çık</button>
+    </div>
+  </section>
+
+  <!-- Oyun içi üst bar -->
+  <div id="hud" hidden>
+    <div class="hud-group">
+      <span class="pill"><canvas data-art="fish" data-w="24"></canvas><b id="hudFish">0/0</b></span>
+      <span class="pill"><canvas data-art="bone" data-w="24"></canvas><b id="hudBone">0/0</b></span>
+      <span class="pill"><b id="hudTime">0:00</b></span>
+    </div>
+    <div class="hud-group">
+      <span id="voiceBadge" class="pill" hidden>🔊</span>
+      <button id="btnSwitch" class="hud-btn" hidden aria-label="Karakter değiştir">⇄</button>
+      <button id="btnMic" class="hud-btn" aria-label="Mikrofon">🎤</button>
+      <button id="btnPause" class="hud-btn" aria-label="Menü">☰</button>
+    </div>
+  </div>
+
+  <div id="partner" hidden><canvas></canvas><i></i></div>
+
+  <!-- Dokunmatik kontroller -->
+  <div id="controls" hidden>
+    <div id="dpad" data-dir=""><span class="l">◀</span><span class="r">▶</span></div>
+    <button id="btnAbility" aria-label="Yetenek">🐾</button>
+    <button id="btnJump" aria-label="Zıpla">▲</button>
+  </div>
+
+  <!-- Bölüm sonu -->
+  <div id="win" class="overlay" hidden>
+    <div class="card">
+      <h2>Bölüm tamamlandı!</h2>
+      <p id="winStats" class="stats"></p>
+      <p id="winNote" class="msg"></p>
+      <div class="row">
+        <button id="btnAgain" class="btn primary">Tekrar oyna</button>
+        <button id="btnWinMenu" class="btn ghost">Ana menü</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Duraklatma menüsü -->
+  <div id="pause" class="overlay" hidden>
+    <div class="card">
+      <h2>Menü</h2>
+      <button id="btnResume" class="btn primary">Devam et</button>
+      <button id="btnRestart" class="btn">Bölümü yeniden başlat</button>
+      <button id="btnFullscreen" class="btn">Tam ekran</button>
+      <button id="btnQuit" class="btn ghost">Oyundan çık</button>
+    </div>
+  </div>
+
+  <!-- Bağlantı koptu -->
+  <div id="lost" class="overlay" hidden>
+    <div class="card">
+      <h2>Bağlantı koptu</h2>
+      <p class="msg">Arkadaşınla bağlantı kesildi. Yeni bir oda kurup tekrar deneyebilirsiniz.</p>
+      <button id="btnLostMenu" class="btn primary">Ana menü</button>
+    </div>
+  </div>
+
+  <div id="rotate"><div><span>↻</span><p>Telefonu yan çevir</p></div></div>
+  <div id="toast" role="status"></div>
+  <audio id="remoteAudio" autoplay playsinline></audio>
+
+  <script src="js/vendor/phaser.min.js"></script>
+  <script src="js/vendor/peerjs.min.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
