@@ -197,6 +197,13 @@ function wireNet(net) {
     menuMsg('Bu oda dolu.', true);
   });
   net.on('mic', renderMic);
+  net.on('signal', (ok) => {
+    // Oda kuran, arkadaşı katılmadan önce sunucuyla bağlantısını kaybettiyse bunu görsün.
+    if (!net.isHost || net.connected || app.playing) return;
+    $('roomStatus').textContent = ok
+      ? 'Arkadaşın bekleniyor… Kodu ona gönder.'
+      : 'Sunucu bağlantısı yenileniyor… Bu ekranı açık tut.';
+  });
   net.on('voice', (stream) => {
     const audio = $('remoteAudio');
     audio.srcObject = stream;
@@ -307,7 +314,7 @@ async function joinRoom(code) {
   app.net = net;
   app.mode = 'online';
   try {
-    await net.join(code);
+    await net.join(code, (text) => menuMsg(text));
   } catch (err) {
     net.close();
     if (app.net === net) app.net = null;

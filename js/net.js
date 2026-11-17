@@ -8,14 +8,37 @@ function randomCode() {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
 
+// Bağlantı yolu bulmak için kullanılan sunucular. STUN: cihazın dış adresini öğrenir.
+// TURN: iki cihaz doğrudan bağlanamazsa (mobil veri, sıkı modemler) veriyi aktarır.
+const TURN_USER = '7cb58095af4d59878b52fc17';
+const TURN_PASS = 'LKPfY7QS5P6asbZm';
+const ICE_SERVERS = [
+  { urls: 'stun:stun.relay.metered.ca:80' },
+  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+  // Metered TURN (ücretsiz plan): telefonlar farklı ağlardayken veriyi ve sesi aktarır.
+  {
+    urls: [
+      'turn:global.relay.metered.ca:80',
+      'turn:global.relay.metered.ca:80?transport=tcp',
+      'turn:global.relay.metered.ca:443',
+      'turns:global.relay.metered.ca:443?transport=tcp',
+    ],
+    username: TURN_USER,
+    credential: TURN_PASS,
+  },
+];
+
 function peerOptions() {
+  const opts = { config: { iceServers: ICE_SERVERS, sdpSemantics: 'unified-plan' }, debug: 1 };
   // Varsayılan: PeerJS'in ücretsiz eşleştirme sunucusu.
   // Geliştirme için adres çubuğuna ?sig=localhost:9000 yazılabilir.
   const sig = new URLSearchParams(location.search).get('sig');
-  if (!sig) return {};
+  if (!sig) return opts;
   const [host, port] = sig.split(':');
-  return { host, port: Number(port) || 9000, path: '/', secure: false };
+  return { ...opts, host, port: Number(port) || 9000, path: '/', secure: false };
 }
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export class Net {
   constructor() {
@@ -50,8 +73,14 @@ export class Net {
         const code = randomCode();
         const peer = new window.Peer(PREFIX + code, peerOptions());
         let opened = false;
+        const timer = setTimeout(() => {
+          if (opened) return;
+          peer.destroy();
+          reject(new Error('Sunucuya bağlanılamadı (zaman aşımı). İnternetini kontrol edip tekrar dene.'));
+        }, 20000);
         peer.on('open', () => {
           opened = true;
+          clearTimeout(timer);
           this.peer = peer;
           this.code = code;
           this._bindPeer(peer);
@@ -59,31 +88,60 @@ export class Net {
         });
         peer.on('error', (err) => {
           if (opened) return;
+          clearTimeout(timer);
           peer.destroy();
           if (err.type === 'unavailable-id' && ++tries < 6) attempt();
-          else reject(new Error('Sunucuya bağlanılamadı. İnternetini kontrol edip tekrar dene.'));
+          else reject(new Error(`Sunucuya bağlanılamadı (${err.type || 'hata'}). İnternetini kontrol edip tekrar dene.`));
         });
       };
       attempt();
     });
   }
 
-  // Davet koduyla odaya katılır.
-  join(code) {
+  // Davet koduyla odaya katılır. Oda kuranın telefonu kısa süreliğine arka plana geçmiş olabilir
+  // (ör. kodu WhatsApp'tan gönderirken); bu yüzden "oda bulunamadı" hemen pes etmek yerine birkaç kez yeniden denenir.
+  async join(code, onStatus = () => {}) {
     this.isHost = false;
     this.code = code;
+    const deadline = performance.now() + 30000;
+    let lastErr = null;
+    for (let attempt = 1; performance.now() < deadline && !this.closed; attempt++) {
+      if (attempt > 1) onStatus(`Oda aranıyor… (${attempt}. deneme)`);
+      try {
+        await this._joinOnce(code, onStatus);
+        return;
+      } catch (err) {
+        lastErr = err;
+        if (!err.retry) break;
+        await wait(2500);
+      }
+    }
+    throw lastErr || new Error('Odaya bağlanılamadı.');
+  }
+
+  _joinOnce(code, onStatus) {
     return new Promise((resolve, reject) => {
       const peer = new window.Peer(undefined, peerOptions());
       let done = false;
-      const fail = (msg) => {
+      let timeout = null;
+      const fail = (msg, retry = false) => {
         if (done) return;
         done = true;
         clearTimeout(timeout);
         peer.destroy();
-        reject(new Error(msg));
+        const e = new Error(msg);
+        e.retry = retry;
+        reject(e);
       };
-      const timeout = setTimeout(() => fail('Odaya bağlanılamadı. Kodu kontrol edip tekrar dene.'), 15000);
+      timeout = setTimeout(() => fail('Sunucuya bağlanılamadı (zaman aşımı). İnternetini kontrol edip tekrar dene.'), 20000);
       peer.on('open', () => {
+        clearTimeout(timeout);
+        onStatus('Oda aranıyor, arkadaşının telefonuna bağlanılıyor…');
+        // Oda bulunduysa ama doğrudan bağlantı kurulamıyorsa (ağ engeli) burada takılır.
+        timeout = setTimeout(
+          () => fail('İki telefon birbirine bağlanamadı (ağ engeli). Biraz sonra tekrar deneyin.'),
+          25000,
+        );
         const conn = peer.connect(PREFIX + code, { reliable: true, serialization: 'json' });
         conn.on('open', () => {
           if (done) return;
@@ -94,11 +152,13 @@ export class Net {
           this._bindConn(conn);
           resolve();
         });
-        conn.on('error', () => fail('Odaya bağlanılamadı.'));
+        conn.on('error', () => fail('İki telefon birbirine bağlanamadı (ağ engeli).'));
       });
       peer.on('error', (err) => {
-        if (err.type === 'peer-unavailable') fail('Bu kodla açık bir oda bulunamadı.');
-        else fail('Sunucuya bağlanılamadı. İnternetini kontrol edip tekrar dene.');
+        if (err.type === 'peer-unavailable') fail('Bu kodla açık bir oda bulunamadı. Oda kuranın ekranı açık mı?', true);
+        else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error' || err.type === 'socket-closed') {
+          fail(`Sunucuya bağlanılamadı (${err.type}). İnternetini kontrol edip tekrar dene.`, true);
+        } else fail(`Odaya bağlanılamadı (${err.type || 'hata'}).`);
       });
     });
   }
@@ -123,11 +183,32 @@ export class Net {
       call.on('close', () => this.emit('voice', null));
     });
     peer.on('disconnected', () => {
-      // Eşleştirme sunucusuyla bağ koptu; oyun bağlantısı sürer. Yeniden bağlanmayı dene.
-      if (!this.closed && !peer.destroyed) {
-        try { peer.reconnect(); } catch { /* yoksay */ }
-      }
+      // Eşleştirme sunucusuyla bağ koptu (çoğunlukla telefon arka plana geçince); oyun bağlantısı sürer.
+      this.emit('signal', false);
+      this._reconnectSignal();
     });
+    peer.on('open', () => this.emit('signal', true));
+    peer.on('error', (err) => {
+      // Oda kurulduktan sonraki sunucu hataları: bekleyip yeniden bağlan.
+      if (['network', 'server-error', 'socket-error', 'socket-closed'].includes(err.type)) this._reconnectSignal(1500);
+    });
+    // Sayfa yeniden görünür olunca sunucu bağlantısını hemen tazele.
+    this._onVisible = () => {
+      if (!document.hidden && this.peer && this.peer.disconnected) this._reconnectSignal();
+    };
+    document.addEventListener('visibilitychange', this._onVisible);
+    window.addEventListener('online', this._onVisible);
+  }
+
+  _reconnectSignal(delay = 0) {
+    clearTimeout(this._recon);
+    this._recon = setTimeout(() => {
+      const peer = this.peer;
+      if (this.closed || !peer || peer.destroyed || !peer.disconnected) return;
+      if (document.hidden) return; // görünür olunca tekrar denenir
+      try { peer.reconnect(); } catch { /* yoksay */ }
+      this._reconnectSignal(4000); // olmazsa birkaç saniye sonra yine dene
+    }, delay);
   }
 
   _bindConn(conn) {
@@ -203,6 +284,11 @@ export class Net {
 
   close() {
     this.closed = true;
+    clearTimeout(this._recon);
+    if (this._onVisible) {
+      document.removeEventListener('visibilitychange', this._onVisible);
+      window.removeEventListener('online', this._onVisible);
+    }
     clearInterval(this.timer);
     this.connected = false;
     if (this.micStream) for (const tr of this.micStream.getTracks()) tr.stop();
